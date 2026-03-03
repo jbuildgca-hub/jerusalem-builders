@@ -91,6 +91,50 @@ export const projects = {
   },
 }
 
+// Extract text from PDF using pdf.js CDN
+async function extractTextFromPDF(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const typedArray = new Uint8Array(e.target?.result as ArrayBuffer)
+        // @ts-ignore
+        const pdfjsLib = (window as any).pdfjsLib
+        if (!pdfjsLib) {
+          resolve('')
+          return
+        }
+        const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise
+        let text = ''
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          text += content.items.map((item: any) => item.str).join(' ') + '\n'
+        }
+        resolve(text)
+      } catch {
+        resolve('')
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  })
+}
+
+// Load pdf.js if not loaded
+async function ensurePdfJs(): Promise<void> {
+  if ((window as any).pdfjsLib) return
+  return new Promise((resolve) => {
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+    script.onload = () => {
+      ;(window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+      resolve()
+    }
+    document.head.appendChild(script)
+  })
+}
+
 export const invoices = {
   list: async (userId: string, projectId?: string): Promise<ApiResult<Invoice[]>> => {
     let query = supabase.from('invoices').select('*, project:projects(id, name)').eq('user_id', userId).order('created_at', { ascending: false })
@@ -116,43 +160,55 @@ export const invoices = {
   },
   extractWithAI: async (imageUrl: string, file?: File): Promise<ApiResult<Partial<Invoice>>> => {
     try {
-      let b64: string
-      let mediaType: string
+      const isPDF = file?.type === 'application/pdf' || file?.name?.endsWith('.pdf')
 
-      if (file) {
+      let promptText = ''
+      let b64: string | undefined
+      let mediaType: string | undefined
+
+      if (isPDF && file) {
+        // Extract text from PDF
+        await ensurePdfJs()
+        const pdfText = await extractTextFromPDF(file)
+        
+        promptText = `אתה מומחה לחשבוניות ישראליות. להלן טקסט שחולץ מחשבונית:
+
+${pdfText}
+
+חלץ את הנתונים והחזר JSON בלבד ללא markdown:
+{"supplier_name":"שם הספק","invoice_number":"מספר חשבונית","invoice_date":"DD/MM/YYYY","description":"תיאור קצר","subtotal":0,"tax":0,"total":0}
+חשוב: כל הסכומים חייבים להיות מספרים בלבד ללא סימן ₪.`
+      } else if (file) {
+        // Image file
         b64 = await new Promise<string>((res) => {
           const reader = new FileReader()
           reader.onload = () => res((reader.result as string).split(',')[1])
           reader.readAsDataURL(file)
         })
         mediaType = file.type || 'image/jpeg'
+        promptText = `אתה מומחה לחשבוניות ישראליות. חלץ את הנתונים מהתמונה והחזר JSON בלבד ללא markdown:
+{"supplier_name":"שם הספק","invoice_number":"מספר חשבונית","invoice_date":"DD/MM/YYYY","description":"תיאור קצר","subtotal":0,"tax":0,"total":0}
+חשוב: כל הסכומים חייבים להיות מספרים בלבד ללא סימן ₪.`
       } else {
-        const resp = await fetch(imageUrl)
-        const blob = await resp.blob()
-        b64 = await new Promise<string>((res) => {
-          const reader = new FileReader()
-          reader.onload = () => res((reader.result as string).split(',')[1])
-          reader.readAsDataURL(blob)
-        })
-        mediaType = blob.type || 'image/jpeg'
+        return { data: null, error: 'לא סופק קובץ' }
       }
-
-      const prompt = `אתה מומחה לחשבוניות. חלץ את הנתונים מהחשבונית והחזר JSON בלבד ללא markdown:
-{"supplier_name":"שם הספק","invoice_number":"מספר חשבונית","invoice_date":"DD/MM/YYYY","description":"תיאור","subtotal":0,"tax":0,"total":0}
-חשוב: כל הסכומים חייבים להיות מספרים. חשב סכום סופי אחרי הנחות אם יש.`
 
       const aiResp = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, imageBase64: b64, mimeType: mediaType }),
+        body: JSON.stringify({ 
+          prompt: promptText, 
+          imageBase64: b64, 
+          mimeType: mediaType 
+        }),
       })
 
       const aiData = await aiResp.json()
       if (aiData.error) throw new Error(aiData.error)
       const parsed = JSON.parse(aiData.text.replace(/```json|```/g, '').trim())
       return { data: { ...parsed, ai_extracted: true }, error: null }
-    } catch (e) {
-      return { data: null, error: 'שגיאה בחילוץ נתונים מ-AI' }
+    } catch (e: any) {
+      return { data: null, error: 'שגיאה בחילוץ נתונים מ-AI: ' + e.message }
     }
   },
 }
