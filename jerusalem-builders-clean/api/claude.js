@@ -5,30 +5,32 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const geminiKey = process.env.VITE_GEMINI_KEY || 'AIzaSyAJ8JdLVd8dqeWXPNXc-KOC2uu8FExAKEs'
+  const openaiKey = process.env.OPENAI_KEY
+  const { prompt, imageBase64, mimeType } = req.body
 
   try {
-    const { prompt, imageBase64, mimeType } = req.body
-    const parts = []
-    if (imageBase64) {
-      parts.push({ inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } })
-    }
-    parts.push({ text: prompt || 'Extract invoice data as JSON' })
+    const messages = [{
+      role: 'user',
+      content: imageBase64
+        ? [
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+            { type: 'text', text: prompt }
+          ]
+        : [{ type: 'text', text: prompt }]
+    }]
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: { temperature: 0, maxOutputTokens: 1500 }
-        })
-      }
-    )
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiKey}`
+      },
+      body: JSON.stringify({ model: 'gpt-4o', messages, max_tokens: 1500 })
+    })
+
     const data = await response.json()
     if (data.error) return res.status(400).json({ error: data.error.message })
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const text = data.choices?.[0]?.message?.content || ''
     res.status(200).json({ text })
   } catch (err) {
     res.status(500).json({ error: err.message })
