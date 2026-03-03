@@ -12,19 +12,14 @@ import QuotesSection from './components/quotes/QuotesSection'
 import UsersSection from './components/admin/UsersSection'
 import FieldWorkerApp from './components/admin/FieldWorkerApp'
 import ScannerSection from './components/scanner/ScannerSection'
-import { usePermissions, NAV_BY_ROLE, ROLE_LABELS, ROLE_COLORS, type UserRole } from './lib/permissions'
+import { usePermissions, ROLE_LABELS, ROLE_COLORS, type UserRole } from './lib/permissions'
 import { Toaster } from 'react-hot-toast'
-
-// ─── Lazy sections (inline for simplicity) ────────────────────────
 
 function DashboardSection() {
   const { stats, projects, alerts, fetchStats } = useAppStore()
   const { user } = useAuthStore()
-
   useEffect(() => { if (user) fetchStats(user.id) }, [user?.id])
-
   const recentAlerts = alerts.slice(0, 5)
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
@@ -33,8 +28,6 @@ function DashboardSection() {
           <div style={{ fontSize: 11, color: '#7A756E', marginTop: 3 }}>{new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
         </div>
       </div>
-
-      {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1, background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.12)', marginBottom: 20 }}>
         {[
           { label: 'פרויקטים פעילים', val: stats?.active_projects ?? '—', color: '#C9A84C' },
@@ -49,9 +42,7 @@ function DashboardSection() {
           </div>
         ))}
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16 }}>
-        {/* Projects mini table */}
         <div style={{ background: '#FFFFFF', border: '1px solid rgba(201,168,76,0.12)', padding: 0 }}>
           <div style={{ fontSize: 8, letterSpacing: 3.5, textTransform: 'uppercase' as const, color: '#C9A84C', padding: '14px 16px 0', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>פרויקטים אחרונים</span>
@@ -76,8 +67,6 @@ function DashboardSection() {
             </div>
           )}
         </div>
-
-        {/* Alerts */}
         <div style={{ background: '#FFFFFF', border: '1px solid rgba(201,168,76,0.12)', padding: 0 }}>
           <div style={{ fontSize: 8, letterSpacing: 3.5, textTransform: 'uppercase' as const, color: '#C9A84C', padding: '14px 16px 10px' }}>
             התראות {recentAlerts.filter(a => !a.is_read).length > 0 && <span style={{ color: '#A85050' }}>● {recentAlerts.filter(a => !a.is_read).length}</span>}
@@ -86,12 +75,7 @@ function DashboardSection() {
             <div style={{ padding: '20px', textAlign: 'center', color: '#7A756E', fontSize: 11 }}>אין התראות פתוחות ✓</div>
           )}
           {recentAlerts.map(a => (
-            <div key={a.id} style={{
-              padding: '9px 14px', borderBottom: '1px solid rgba(255,255,255,0.03)',
-              background: a.severity === 'critical' ? 'rgba(168,80,80,0.03)' : 'transparent',
-              border: a.severity === 'critical' ? '1px solid rgba(168,80,80,0.15)' : undefined,
-              cursor: 'pointer',
-            }}>
+            <div key={a.id} style={{ padding: '9px 14px', borderBottom: '1px solid rgba(255,255,255,0.03)', cursor: 'pointer' }}>
               <div style={{ fontSize: 11, color: '#1A1714' }}>{a.title}</div>
               <div style={{ fontSize: 9, color: '#7A756E', marginTop: 2 }}>{a.project?.name} · {new Date(a.created_at).toLocaleDateString('he-IL')}</div>
             </div>
@@ -101,20 +85,6 @@ function DashboardSection() {
     </div>
   )
 }
-
-function PlaceholderSection({ title, sub }: { title: string; sub: string }) {
-  return (
-    <div>
-      <div style={{ fontFamily: 'serif', fontSize: 26, color: '#1A1714', marginBottom: 8 }}>{title}</div>
-      <div style={{ fontSize: 11, color: '#7A756E', marginBottom: 32 }}>{sub}</div>
-      <div style={{ padding: 40, border: '1px dashed rgba(201,168,76,0.15)', textAlign: 'center', color: '#7A756E', fontSize: 12 }}>
-        מודול זה בפיתוח — יהיה זמין בגרסה הבאה
-      </div>
-    </div>
-  )
-}
-
-// ─── Shell Layout ─────────────────────────────────────────────────
 
 const ALL_NAV = [
   { id: 'dashboard', icon: '◈', label: 'דשבורד', group: 'ניהול', roles: ['admin', 'project_manager'] },
@@ -129,13 +99,11 @@ const ALL_NAV = [
 ]
 
 function AppShell() {
-  const { user } = useAuthStore()
+  const { user, signOut } = useAuthStore()
   const { activeSection, setActiveSection } = useAppStore()
   const unread = useUnreadAlerts()
-  const { signOut } = useAuthStore()
   const { role, can } = usePermissions()
 
-  // Field worker gets their own simplified app
   if (role === 'field_worker') return <FieldWorkerApp />
 
   const NAV = ALL_NAV.filter(n => n.roles.includes(role))
@@ -158,7 +126,6 @@ function AppShell() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gridTemplateRows: '52px 1fr', height: '100vh', fontFamily: "'Heebo', sans-serif", direction: 'rtl' }}>
-      {/* Topbar */}
       <div style={{ gridColumn: '1/-1', background: '#FFFFFF', borderBottom: '1px solid rgba(201,168,76,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 0 }}>
         <div style={{ width: 200, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, borderLeft: '1px solid rgba(201,168,76,0.12)', height: '100%' }}>
           <img src={LOGO_DATA} alt="Jerusalem Builders" style={{ height: 36, width: 'auto' }} />
@@ -178,16 +145,14 @@ function AppShell() {
                 ? <img src={(user as any).avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : user?.full_name?.[0] ?? 'א'}
             </div>
-            <button onClick={signOut} style={{ background: 'none', border: 'none', color: '#7A756E', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>יציאה</button>
+            <div style={{ fontSize: 11, color: '#1A1714' }}>{user?.full_name}</div>
+            <button onClick={signOut} style={{ background: 'none', border: '1px solid rgba(201,168,76,0.2)', color: '#A85050', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', padding: '4px 10px' }}>יציאה</button>
           </div>
-          {/* Role badge */}
           <div style={{ fontSize: 7, letterSpacing: 2, padding: '3px 9px', textTransform: 'uppercase', color: ROLE_COLORS[role as UserRole] ?? '#7A756E', border: `1px solid ${ROLE_COLORS[role as UserRole] ?? '#7A756E'}40`, background: `${ROLE_COLORS[role as UserRole] ?? '#7A756E'}12` }}>
             {ROLE_LABELS[role as UserRole] ?? role}
           </div>
         </div>
       </div>
-
-      {/* Sidebar */}
       <nav style={{ background: '#FFFFFF', borderLeft: '1px solid rgba(201,168,76,0.12)', padding: '8px 0', overflowY: 'auto' }}>
         {groups.map(group => (
           <div key={group} style={{ marginBottom: 4 }}>
@@ -202,18 +167,11 @@ function AppShell() {
               }}>
                 <span style={{ fontSize: 12, width: 16, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
                 <span>{n.label}</span>
-                {n.id === 'invoices' && unread.length > 0 && (
-                  <span style={{ marginRight: 'auto', background: '#A85050', color: '#fff', fontSize: 8, padding: '1px 5px', borderRadius: 8 }}>
-                    {unread.length}
-                  </span>
-                )}
               </div>
             ))}
           </div>
         ))}
       </nav>
-
-      {/* Main */}
       <main style={{ overflow: 'auto', background: '#F5F3EF' }}>
         <div style={{ padding: '20px 24px', minHeight: '100%' }}>
           {renderSection()}
@@ -223,15 +181,17 @@ function AppShell() {
   )
 }
 
-// ─── Root App ─────────────────────────────────────────────────────
-
 export default function App() {
   const { user, loading } = useAuth()
 
   if (loading) {
     return (
-      <div style={{ height: '100vh', background: '#F5F3EF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ height: '100vh', background: '#F5F3EF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
         <img src={LOGO_DATA} alt="Jerusalem Builders" style={{ width: 160, height: 'auto' }} />
+        <div style={{ fontSize: 11, color: '#7A756E', letterSpacing: 2 }}>טוען...</div>
+        <button onClick={() => window.location.reload()} style={{ marginTop: 8, background: 'none', border: '1px solid rgba(201,168,76,0.3)', color: '#C9A84C', padding: '6px 16px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: 1 }}>
+          לחץ לרענון
+        </button>
       </div>
     )
   }
