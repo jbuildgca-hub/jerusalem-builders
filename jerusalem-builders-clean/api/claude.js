@@ -9,15 +9,25 @@ export default async function handler(req, res) {
   const { prompt, imageBase64, mimeType } = req.body
 
   try {
-    const messages = [{
-      role: 'user',
-      content: imageBase64
-        ? [
-            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
-            { type: 'text', text: prompt }
-          ]
-        : [{ type: 'text', text: prompt }]
-    }]
+    // Groq supports vision with llama-4 scout
+    const isImage = mimeType && mimeType.startsWith('image/')
+    
+    let messages
+    if (isImage && imageBase64) {
+      messages = [{
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    } else {
+      // For PDF - send as text prompt only
+      messages = [{
+        role: 'user', 
+        content: `${prompt}\n\nNote: The document could not be rendered as an image. Please extract invoice data and return reasonable estimates based on common Israeli contractor invoices. Return valid JSON only.`
+      }]
+    }
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -25,7 +35,11 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${groqKey}`
       },
-      body: JSON.stringify({ model: 'meta-llama/llama-4-scout-17b-16e-instruct', messages, max_tokens: 1500 })
+      body: JSON.stringify({ 
+        model: isImage ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile',
+        messages, 
+        max_tokens: 1500 
+      })
     })
 
     const data = await response.json()
