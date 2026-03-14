@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useAuthStore, useAppStore, useUnreadAlerts } from './store'
 import { LOGO_DATA } from './lib/logo'
@@ -106,39 +106,8 @@ function AppShell() {
 
   if (role === 'field_worker') return <FieldWorkerApp />
 
-  const NAV = useMemo(() => ALL_NAV.filter((n) => n.roles.includes(role)), [role])
-  const groups = useMemo(() => [...new Set(NAV.map((n) => n.group))], [NAV])
-
-  const navigateToSection = (sectionId: string) => {
-    if (!NAV.some((n) => n.id === sectionId)) return
-    setActiveSection(sectionId)
-    if (window.location.hash !== `#${sectionId}`) {
-      window.history.pushState(null, '', `#${sectionId}`)
-    }
-  }
-
-  useEffect(() => {
-    const applySectionFromHash = () => {
-      const hashedSection = decodeURIComponent(window.location.hash.replace('#', '')).trim()
-      if (hashedSection && NAV.some((n) => n.id === hashedSection)) {
-        if (hashedSection !== activeSection) setActiveSection(hashedSection)
-        return
-      }
-      if (!NAV.some((n) => n.id === activeSection) && NAV.length > 0) {
-        setActiveSection(NAV[0].id)
-      }
-    }
-
-    applySectionFromHash()
-    window.addEventListener('hashchange', applySectionFromHash)
-    return () => window.removeEventListener('hashchange', applySectionFromHash)
-  }, [NAV, activeSection, setActiveSection])
-
-  useEffect(() => {
-    if (activeSection && window.location.hash !== `#${activeSection}`) {
-      window.history.replaceState(null, '', `#${activeSection}`)
-    }
-  }, [activeSection])
+  const NAV = ALL_NAV.filter(n => n.roles.includes(role))
+  const groups = [...new Set(NAV.map(n => n.group))]
 
   const renderSection = () => {
     switch (activeSection) {
@@ -192,64 +161,23 @@ function AppShell() {
           </div>
         </div>
       </div>
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid rgba(201,168,76,0.12)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', overflowX: 'auto', whiteSpace: 'nowrap', WebkitOverflowScrolling: 'touch' }}>
-          <span style={{ fontSize: 9, letterSpacing: 1.4, color: '#A09890', textTransform: 'uppercase', padding: '0 8px' }}>סרגל מהיר</span>
-          {NAV.map((n) => (
-            <a
-              key={`quick-${n.id}`}
-              href={`#${n.id}`}
-              onClick={(e) => {
-                e.preventDefault()
-                navigateToSection(n.id)
-              }}
-              aria-current={activeSection === n.id ? 'page' : undefined}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 10px',
-                fontSize: 10,
-                border: `1px solid ${activeSection === n.id ? '#C9A84C55' : 'rgba(201,168,76,0.16)'}`,
-                background: activeSection === n.id ? 'rgba(201,168,76,0.09)' : '#FFFFFF',
-                color: activeSection === n.id ? '#C9A84C' : '#7A756E',
-                borderRadius: 16,
-                textDecoration: 'none',
-              }}
-            >
-              <span style={{ fontSize: 11, lineHeight: 1 }}>{n.icon}</span>
-              <span>{n.label}</span>
-            </a>
-          ))}
-        </div>
-      </div>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <nav style={{ background: '#FFFFFF', borderLeft: '1px solid rgba(201,168,76,0.12)', padding: sidebarOpen ? '8px 0' : 0, overflowY: 'auto', width: sidebarOpen ? 200 : 0, minWidth: sidebarOpen ? 200 : 0, opacity: sidebarOpen ? 1 : 0, transition: 'width .2s ease, min-width .2s ease, opacity .2s ease', WebkitOverflowScrolling: 'touch' }}>
           {groups.map(group => (
             <div key={group} style={{ marginBottom: 4 }}>
               <div style={{ fontSize: 7, letterSpacing: 4, color: '#A09890', textTransform: 'uppercase', padding: '10px 18px 4px', whiteSpace: 'nowrap' }}>{group}</div>
               {NAV.filter(n => n.group === group).map(n => (
-                <a
-                  key={n.id}
-                  href={`#${n.id}`}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    navigateToSection(n.id)
-                  }}
-                  aria-current={activeSection === n.id ? 'page' : undefined}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 9, padding: '9px 18px',
-                    fontSize: 11, letterSpacing: .5, cursor: 'pointer', transition: '.15s',
-                    color: activeSection === n.id ? '#C9A84C' : '#7A756E',
-                    borderRight: `2px solid ${activeSection === n.id ? '#C9A84C' : 'transparent'}`,
-                    background: activeSection === n.id ? 'rgba(201,168,76,0.04)' : 'transparent',
-                    whiteSpace: 'nowrap',
-                    textDecoration: 'none',
-                  }}
-                >
+                <div key={n.id} onClick={() => setActiveSection(n.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: 9, padding: '9px 18px',
+                  fontSize: 11, letterSpacing: .5, cursor: 'pointer', transition: '.15s',
+                  color: activeSection === n.id ? '#C9A84C' : '#7A756E',
+                  borderRight: `2px solid ${activeSection === n.id ? '#C9A84C' : 'transparent'}`,
+                  background: activeSection === n.id ? 'rgba(201,168,76,0.04)' : 'transparent',
+                  whiteSpace: 'nowrap',
+                }}>
                   <span style={{ fontSize: 12, width: 16, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
                   <span>{n.label}</span>
-                </a>
+                </div>
               ))}
             </div>
           ))}
