@@ -207,8 +207,7 @@ import { useAuthStore } from '../store'
 
 export function usePermissions() {
   const { user } = useAuthStore()
-  const rawRole = (user as any)?.role
-  const role: UserRole = rawRole && rawRole in ROLE_PERMISSIONS ? rawRole as UserRole : 'project_manager'
+  const role = (user as any)?.role as UserRole ?? 'field_worker'
   const perms = ROLE_PERMISSIONS[role]
 
   const can = (permission: keyof Permissions): boolean => {

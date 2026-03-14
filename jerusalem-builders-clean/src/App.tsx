@@ -100,7 +100,7 @@ const ALL_NAV = [
 
 function AppShell() {
   const { user, signOut } = useAuthStore()
-  const { activeSection, setActiveSection, sidebarOpen, setSidebarOpen } = useAppStore()
+  const { activeSection, setActiveSection } = useAppStore()
   const unread = useUnreadAlerts()
   const { role, can } = usePermissions()
 
@@ -125,23 +125,15 @@ function AppShell() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: '100dvh', fontFamily: "'Heebo', sans-serif", direction: 'rtl' }}>
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid rgba(201,168,76,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 0, minHeight: 52 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gridTemplateRows: '52px 1fr', height: '100vh', fontFamily: "'Heebo', sans-serif", direction: 'rtl' }}>
+      <div style={{ gridColumn: '1/-1', background: '#FFFFFF', borderBottom: '1px solid rgba(201,168,76,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 0 }}>
         <div style={{ width: 200, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, borderLeft: '1px solid rgba(201,168,76,0.12)', height: '100%' }}>
           <img src={LOGO_DATA} alt="Jerusalem Builders" style={{ height: 36, width: 'auto' }} />
         </div>
         <div style={{ flex: 1, padding: '0 24px' }}>
-          <input placeholder="חיפוש — פרויקט, עובד, חשבונית..." style={{ background: '#E8E5E0', border: '1px solid rgba(201,168,76,0.12)', color: '#1A1714', padding: '7px 14px', fontSize: 11, fontFamily: 'inherit', outline: 'none', width: 'min(280px, 100%)' }} />
+          <input placeholder="חיפוש — פרויקט, עובד, חשבונית..." style={{ background: '#E8E5E0', border: '1px solid rgba(201,168,76,0.12)', color: '#1A1714', padding: '7px 14px', fontSize: 11, fontFamily: 'inherit', outline: 'none', width: 280 }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 24 }}>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{ background: 'none', border: '1px solid rgba(201,168,76,0.2)', color: '#7A756E', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}
-            title={sidebarOpen ? 'הסתר תפריט' : 'הצג תפריט'}
-            aria-label={sidebarOpen ? 'הסתר תפריט' : 'הצג תפריט'}
-          >
-            ☰
-          </button>
           <div style={{ fontSize: 11, color: '#7A756E' }}>{new Date().toLocaleDateString('he-IL')}</div>
           <div style={{ position: 'relative' }}>
             <button style={{ background: 'none', border: '1px solid rgba(201,168,76,0.12)', color: '#7A756E', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🔔</button>
@@ -161,33 +153,30 @@ function AppShell() {
           </div>
         </div>
       </div>
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <nav style={{ background: '#FFFFFF', borderLeft: '1px solid rgba(201,168,76,0.12)', padding: sidebarOpen ? '8px 0' : 0, overflowY: 'auto', width: sidebarOpen ? 200 : 0, minWidth: sidebarOpen ? 200 : 0, opacity: sidebarOpen ? 1 : 0, transition: 'width .2s ease, min-width .2s ease, opacity .2s ease', WebkitOverflowScrolling: 'touch' }}>
-          {groups.map(group => (
-            <div key={group} style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 7, letterSpacing: 4, color: '#A09890', textTransform: 'uppercase', padding: '10px 18px 4px', whiteSpace: 'nowrap' }}>{group}</div>
-              {NAV.filter(n => n.group === group).map(n => (
-                <div key={n.id} onClick={() => setActiveSection(n.id)} style={{
-                  display: 'flex', alignItems: 'center', gap: 9, padding: '9px 18px',
-                  fontSize: 11, letterSpacing: .5, cursor: 'pointer', transition: '.15s',
-                  color: activeSection === n.id ? '#C9A84C' : '#7A756E',
-                  borderRight: `2px solid ${activeSection === n.id ? '#C9A84C' : 'transparent'}`,
-                  background: activeSection === n.id ? 'rgba(201,168,76,0.04)' : 'transparent',
-                  whiteSpace: 'nowrap',
-                }}>
-                  <span style={{ fontSize: 12, width: 16, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
-                  <span>{n.label}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <main style={{ flex: 1, minWidth: 0, overflow: 'auto', background: '#F5F3EF', WebkitOverflowScrolling: 'touch' }}>
-          <div style={{ padding: '20px 24px', minHeight: '100%' }}>
-            {renderSection()}
+      <nav style={{ background: '#FFFFFF', borderLeft: '1px solid rgba(201,168,76,0.12)', padding: '8px 0', overflowY: 'auto' }}>
+        {groups.map(group => (
+          <div key={group} style={{ marginBottom: 4 }}>
+            <div style={{ fontSize: 7, letterSpacing: 4, color: '#A09890', textTransform: 'uppercase', padding: '10px 18px 4px' }}>{group}</div>
+            {NAV.filter(n => n.group === group).map(n => (
+              <div key={n.id} onClick={() => setActiveSection(n.id)} style={{
+                display: 'flex', alignItems: 'center', gap: 9, padding: '9px 18px',
+                fontSize: 11, letterSpacing: .5, cursor: 'pointer', transition: '.15s',
+                color: activeSection === n.id ? '#C9A84C' : '#7A756E',
+                borderRight: `2px solid ${activeSection === n.id ? '#C9A84C' : 'transparent'}`,
+                background: activeSection === n.id ? 'rgba(201,168,76,0.04)' : 'transparent',
+              }}>
+                <span style={{ fontSize: 12, width: 16, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
+                <span>{n.label}</span>
+              </div>
+            ))}
           </div>
-        </main>
-      </div>
+        ))}
+      </nav>
+      <main style={{ overflow: 'auto', background: '#F5F3EF' }}>
+        <div style={{ padding: '20px 24px', minHeight: '100%' }}>
+          {renderSection()}
+        </div>
+      </main>
     </div>
   )
 }
